@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="8.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\aspireotel.ServiceDefaults\aspireotel.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\aspireotel.QueueCommon\aspireotel.QueueCommon.csproj" />
   </ItemGroup>
 
 </Project>

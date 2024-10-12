@@ -1,3 +1,4 @@
+using aspireotel.QueueCommon;
 using aspireotel.Web;
 using aspireotel.Web.Components;
 
@@ -11,6 +12,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddOutputCache();
+
+builder.AddRabbitMQClient(Bus.Host, configureConnectionFactory: (connectionFactory) =>
+{
+    connectionFactory.ClientProvidedName = "app:event-producer";
+});
 
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {

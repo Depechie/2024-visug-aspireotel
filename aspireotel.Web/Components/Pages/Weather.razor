@@ -1,14 +1,22 @@
 ﻿@page "/weather"
+@using RabbitMQ.Client
+@using System.Text
+@using System.Text.Json
+@using aspireotel.QueueCommon
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
 
 @inject WeatherApiClient WeatherApi
+@inject IServiceProvider ServiceProvider
+@inject ILogger<Weather> Logger
 
 <PageTitle>Weather</PageTitle>
 
 <h1>Weather</h1>
 
-<p>This component demonstrates showing data loaded from a backend API service.</p>
+<p>
+    This component demonstrates showing data loaded from a backend API service. <br />
+</p>
 
 @if (forecasts == null)
 {
@@ -42,8 +50,26 @@ else
 @code {
     private WeatherForecast[]? forecasts;
 
+    private IConnection? _messageConnection;
+    private IModel? _messageChannel;
+
     protected override async Task OnInitializedAsync()
     {
         forecasts = await WeatherApi.GetWeatherAsync();
+
+        Logger.LogInformation($"Sending message...");
+        
+        _messageConnection = ServiceProvider.GetRequiredService<IConnection>();
+        _messageChannel = _messageConnection.CreateModel();
+        _messageChannel.QueueDeclare(Queue.Orders, durable: true, exclusive: false);
+
+        var body = Encoding.UTF8.GetBytes("Hello World!");
+        var properties = _messageChannel.CreateBasicProperties();
+        properties.Persistent = true;
+
+        _messageChannel.BasicPublish(exchange: string.Empty,
+                                    routingKey: Queue.Orders,
+                                    basicProperties: properties,
+                                    body: body);        
     }
 }

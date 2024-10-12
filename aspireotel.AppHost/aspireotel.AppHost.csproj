@@ -12,10 +12,13 @@
   <ItemGroup>
     <ProjectReference Include="..\aspireotel.ApiService\aspireotel.ApiService.csproj" />
     <ProjectReference Include="..\aspireotel.Web\aspireotel.Web.csproj" />
+    <ProjectReference Include="..\aspireotel.WorkerService\aspireotel.WorkerService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="8.2.1" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="8.2.1" />
+
   </ItemGroup>
 
 </Project>
