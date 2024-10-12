@@ -1,7 +1,10 @@
 ﻿@page "/weather"
+@using OpenTelemetry
+@using OpenTelemetry.Context.Propagation
 @using RabbitMQ.Client
 @using System.Text
 @using System.Text.Json
+@using System.Diagnostics
 @using aspireotel.QueueCommon
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
@@ -48,6 +51,9 @@ else
 }
 
 @code {
+    private static readonly TextMapPropagator Propagator = Propagators.DefaultTextMapPropagator;
+    private static readonly ActivitySource _activitySource = new("Aspire.RabbitMQ.Client");
+
     private WeatherForecast[]? forecasts;
 
     private IConnection? _messageConnection;
@@ -58,7 +64,7 @@ else
         forecasts = await WeatherApi.GetWeatherAsync();
 
         Logger.LogInformation($"Sending message...");
-        
+
         _messageConnection = ServiceProvider.GetRequiredService<IConnection>();
         _messageChannel = _messageConnection.CreateModel();
         _messageChannel.QueueDeclare(Queue.Orders, durable: true, exclusive: false);
@@ -67,9 +73,34 @@ else
         var properties = _messageChannel.CreateBasicProperties();
         properties.Persistent = true;
 
+        using var activity = _activitySource.StartActivity($"{Queue.Orders} publish", ActivityKind.Producer);
+        AddActivityToHeader(activity, properties);
+
         _messageChannel.BasicPublish(exchange: string.Empty,
                                     routingKey: Queue.Orders,
                                     basicProperties: properties,
-                                    body: body);        
+                                    body: body);
     }
+
+    private static void AddActivityToHeader(Activity activity, IBasicProperties props)
+    {
+        try
+        {
+            Propagator.Inject(new PropagationContext(activity.Context, Baggage.Current), props, InjectContextIntoHeader);
+            activity?.SetTag("messaging.system", "rabbitmq");
+            activity?.SetTag("messaging.destination_kind", "queue");
+            activity?.SetTag("messaging.destination", Queue.Orders);
+            activity?.SetTag("messaging.rabbitmq.routing_key", Queue.Orders);
+        }
+        catch(Exception ex)
+        {
+            var t = ex.Message;
+        }
+    }
+
+    private static void InjectContextIntoHeader(IBasicProperties props, string key, string value)
+    {
+        props.Headers ??= new Dictionary<string, object>();
+        props.Headers[key] = value;
+    }   
 }
