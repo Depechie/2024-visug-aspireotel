@@ -11,6 +11,14 @@ exporters:
     endpoint: ${env:DASHBOARD_URL}
     tls:
       insecure: true
+  otlp:
+    endpoint: ${env:TEMPO_URL}
+    tls:
+      insecure: true
+  otlphttp/logs:
+    endpoint: ${env:LOKI_URL}
+    tls:
+      insecure: true
 
 processors:
   batch:
@@ -20,8 +28,8 @@ service:
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/dashboard, debug]
+      exporters: [otlphttp/logs, otlp/dashboard, debug]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/dashboard, debug]
+      exporters: [otlp, otlp/dashboard, debug]

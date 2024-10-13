@@ -7,6 +7,27 @@ public static class ResourceBuilderExtensions
 {
     private const string DashboardOtlpUrlVariableName = "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL";
 
+    public static IResourceBuilder<T> WithLokiPushUrl<T>(this IResourceBuilder<T> builder, string name, EndpointReference lokiEndpoint)
+        where T : IResourceWithEnvironment
+    {
+        return builder.WithEnvironment(context =>
+        {
+            var t = context.ExecutionContext;
+            if (context.ExecutionContext.IsPublishMode)
+            {
+                context.EnvironmentVariables[name] = $"{lokiEndpoint.Url}/otlp";
+                return;
+            }
+
+            // https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/lokiexporter#getting-started
+            var url = lokiEndpoint.Url + "/otlp";
+
+            context.EnvironmentVariables[name] = builder.Resource is ContainerResource
+            ? ReplaceLocalhostWithContainerHost(url, builder.ApplicationBuilder.Configuration)
+            : url;
+        });
+    }
+
     // Adds the dashboard OTLP endpoint URL to the environment variables of the resource with the specified name.
     public static IResourceBuilder<T> WithDashboardEndpoint<T>(this IResourceBuilder<T> builder, string name)
         where T : IResourceWithEnvironment
